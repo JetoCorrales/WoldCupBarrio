@@ -70,6 +70,16 @@ async function loadMatchesDataReadOnly() {
   }
 }
 
+function sortMatchesChronologically(matches) {
+  return (Array.isArray(matches) ? matches.slice() : []).sort((a, b) => {
+    const timeA = a && a.time ? String(a.time).split(' ')[0] : '00:00';
+    const timeB = b && b.time ? String(b.time).split(' ')[0] : '00:00';
+    const dateA = new Date(`${a && a.date ? a.date : '9999-12-31'}T${timeA}`);
+    const dateB = new Date(`${b && b.date ? b.date : '9999-12-31'}T${timeB}`);
+    return dateA - dateB;
+  });
+}
+
 function normalizeBetDataResults(data) {
   const source = data && typeof data === 'object' ? data : {};
 
@@ -316,7 +326,8 @@ async function renderPublicResults() {
     ]);
 
     const normalized = recalculateStandingsResults(normalizeBetDataResults(rawData));
-    const matches = Array.isArray(matchesData.matches) ? matchesData.matches : matchesData;
+    const rawMatches = Array.isArray(matchesData.matches) ? matchesData.matches : matchesData;
+    const matches = sortMatchesChronologically(rawMatches);
 
     updateResultsCards(normalized);
     renderParticipantsSummary(normalized.participants || [], normalized);

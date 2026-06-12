@@ -60,3 +60,9 @@ GET
 ```
 
 No debe aparecer ninguna llamada `POST` desde `results.html` ni desde `puntajes.html`.
+
+
+## Corrección incluida
+
+La página pública `results.html` ahora ordena `matches.json` cronológicamente igual que la página administrativa.
+Esto evita que un resultado guardado con el índice del calendario administrativo se muestre sobre otro partido en la vista pública.
