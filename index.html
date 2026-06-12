@@ -3,78 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiniela del Mundial 2026</title>
+  <title>Consulta de Resultados – Mundial 2026</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="public-results-page">
   <header>
-    <h1>Quiniela del Mundial 2026</h1>
-    <p>Administra pronósticos entre amigos para los partidos del Mundial 2026. Cada participante aporta 100 puntos virtuales por partido. Si nadie acierta el marcador exacto, la bolsa se acumula; si uno o varios aciertan, se reparte entre ellos.</p>
-  
-    <nav class="page-nav" aria-label="Navegación principal">
-      <a href="index.html" aria-current="page">Administrar</a>
-      <a href="results.html">Resultados</a>
+    <h1>Consulta de Resultados – Mundial 2026</h1>
+    <p>
+      Página pública solo de consulta. Lee los datos desde Cloudflare Worker usando GET.
+      No permite agregar participantes, editar resultados ni modificar puntajes.
+    </p>
+
+    <nav class="page-nav" aria-label="Navegación pública">
+      <a href="results.html" aria-current="page">Resultados</a>
       <a href="puntajes.html">Puntajes</a>
     </nav>
   </header>
-  <main>
-    <section id="participants-section">
-      <h2>Participantes</h2>
-      <form id="add-participant-form">
-        <input type="text" id="participant-name" placeholder="Nombre del participante" required />
-        <button type="submit">Agregar</button>
-      </form>
-      <div id="participants-list">
-        <!-- Lista dinámica de participantes -->
+
+  <main class="scoreboard-main public-results-main">
+    <section class="scoreboard-hero" aria-labelledby="public-results-title">
+      <div>
+        <h2 id="public-results-title">Resumen de la quiniela</h2>
+        <p>
+          La información se actualiza consultando Cloudflare. Esta página no contiene formularios
+          ni funciones de guardado.
+        </p>
+      </div>
+      <button id="refresh-results" class="primary" type="button">Actualizar datos</button>
+    </section>
+
+    <section id="results-status" class="sync-status info" aria-live="polite">
+      Cargando datos desde Cloudflare...
+    </section>
+
+    <section class="scoreboard-cards" aria-label="Resumen general">
+      <article class="score-card">
+        <span class="score-card-label">Participantes</span>
+        <strong id="results-total-participants">0</strong>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Acumulado actual</span>
+        <strong id="results-current-pool">0</strong>
+        <span class="score-card-note">puntos virtuales</span>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Partidos con resultado</span>
+        <strong id="results-finished-matches">0</strong>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Última actualización</span>
+        <strong id="results-last-update">--</strong>
+      </article>
+    </section>
+
+    <section id="participants-section" class="public-section">
+      <h2>Tabla de participantes</h2>
+      <div id="participants-summary">
+        <!-- Se completa dinámicamente -->
       </div>
     </section>
 
-    <section id="matches-section">
-      <h2>Próximos partidos</h2>
-      <div id="matches-list">
-        <!-- Lista dinámica de partidos -->
+    <section id="matches-section" class="public-section">
+      <h2>Resultados de partidos</h2>
+      <div id="matches-summary">
+        <!-- Se completa dinámicamente -->
       </div>
     </section>
-
-    <!-- Modal para pronósticos y resultados -->
-    <div id="match-modal" class="modal hidden">
-      <div class="modal-content">
-        <span class="close-button" id="close-modal">&times;</span>
-        <h3 id="modal-match-title"></h3>
-        <div id="predictions-form-container">
-          <h4>Pronósticos de los participantes</h4>
-          <form id="predictions-form">
-            <!-- Campos de predicción dinámicos -->
-          </form>
-          <button id="save-predictions" class="primary" type="button">Guardar pronósticos</button>
-        </div>
-        <div id="result-form-container">
-          <h4>Resultado real</h4>
-          <label>
-            <span id="team1-label"></span>
-            <input type="number" id="result-team1" min="0" />
-          </label>
-          <label>
-            <span id="team2-label"></span>
-            <input type="number" id="result-team2" min="0" />
-          </label>
-          <button id="save-result" class="secondary" type="button">Guardar resultado</button>
-        </div>
-        <div id="result-summary" class="hidden">
-          <!-- Resumen del resultado y ganadores -->
-        </div>
-      </div>
-    </div>
   </main>
 
   <footer>
-    <p>Proyecto de quiniela amistosa del Mundial 2026. Los datos se guardan en Cloudflare Worker; el navegador solo conserva una copia local de respaldo. Sistema de puntos virtuales, no dinero real.</p>
+    <p>
+      Solo lectura: esta página únicamente realiza consultas GET al Worker y no modifica datos.
+    </p>
   </footer>
 
-  <!-- Cargamos los datos de los partidos de forma estática. Este script define la
-       variable global MATCHES_DATA, usada como respaldo si la carga de matches.json falla. -->
   <script src="matches_data.js"></script>
   <script src="config.js"></script>
-  <script src="script.js"></script>
+  <script src="results.js"></script>
 </body>
 </html>
