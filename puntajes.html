@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Puntajes de Participantes – Mundial 2026</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="scoreboard-page">
+  <header>
+    <h1>Puntajes de Participantes – Mundial 2026</h1>
+    <p>
+      Página pública solo de consulta. Muestra el ranking actualizado de la quiniela de puntos virtuales.
+    </p>
+    <nav class="page-nav" aria-label="Navegación principal">
+      <a href="index.html">Administrar</a>
+      <a href="results.html">Resultados</a>
+      <a href="puntajes.html" aria-current="page">Puntajes</a>
+    </nav>
+  </header>
+
+  <main class="scoreboard-main">
+    <section class="scoreboard-hero" aria-labelledby="scoreboard-title">
+      <div>
+        <h2 id="scoreboard-title">Tabla de posiciones</h2>
+        <p>
+          Cada partido tiene una bolsa base de 100 puntos virtuales por participante.
+          Si nadie acierta el marcador exacto, la bolsa se acumula para el siguiente partido.
+        </p>
+      </div>
+      <button id="refresh-scoreboard" class="primary" type="button">Actualizar puntajes</button>
+    </section>
+
+    <section id="scoreboard-status" class="sync-status info" aria-live="polite">
+      Cargando puntajes desde Cloudflare...
+    </section>
+
+    <section class="scoreboard-cards" aria-label="Resumen general">
+      <article class="score-card">
+        <span class="score-card-label">Participantes</span>
+        <strong id="total-participants">0</strong>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Acumulado actual</span>
+        <strong id="current-pool">0</strong>
+        <span class="score-card-note">puntos virtuales</span>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Partidos con resultado</span>
+        <strong id="finished-matches">0</strong>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Última actualización</span>
+        <strong id="last-update">--</strong>
+      </article>
+    </section>
+
+    <section class="scoreboard-table-section" aria-labelledby="ranking-title">
+      <h2 id="ranking-title">Ranking de participantes</h2>
+      <div id="scoreboard-table-container" class="scoreboard-table-container">
+        <!-- Tabla dinámica -->
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Esta página es solo de lectura. No permite agregar participantes, registrar pronósticos ni modificar resultados.
+    </p>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="puntajes.js"></script>
+</body>
+</html>

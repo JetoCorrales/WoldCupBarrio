@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiniela del Mundial 2026</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Quiniela del Mundial 2026</h1>
+    <p>Administra pronósticos entre amigos para los partidos del Mundial 2026. Cada participante aporta 100 puntos virtuales por partido. Si nadie acierta el marcador exacto, la bolsa se acumula; si uno o varios aciertan, se reparte entre ellos.</p>
+  
+    <nav class="page-nav" aria-label="Navegación principal">
+      <a href="index.html" aria-current="page">Administrar</a>
+      <a href="results.html">Resultados</a>
+      <a href="puntajes.html">Puntajes</a>
+    </nav>
+  </header>
+  <main>
+    <section id="participants-section">
+      <h2>Participantes</h2>
+      <form id="add-participant-form">
+        <input type="text" id="participant-name" placeholder="Nombre del participante" required />
+        <button type="submit">Agregar</button>
+      </form>
+      <div id="participants-list">
+        <!-- Lista dinámica de participantes -->
+      </div>
+    </section>
+
+    <section id="matches-section">
+      <h2>Próximos partidos</h2>
+      <div id="matches-list">
+        <!-- Lista dinámica de partidos -->
+      </div>
+    </section>
+
+    <!-- Modal para pronósticos y resultados -->
+    <div id="match-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-button" id="close-modal">&times;</span>
+        <h3 id="modal-match-title"></h3>
+        <div id="predictions-form-container">
+          <h4>Pronósticos de los participantes</h4>
+          <form id="predictions-form">
+            <!-- Campos de predicción dinámicos -->
+          </form>
+          <button id="save-predictions" class="primary" type="button">Guardar pronósticos</button>
+        </div>
+        <div id="result-form-container">
+          <h4>Resultado real</h4>
+          <label>
+            <span id="team1-label"></span>
+            <input type="number" id="result-team1" min="0" />
+          </label>
+          <label>
+            <span id="team2-label"></span>
+            <input type="number" id="result-team2" min="0" />
+          </label>
+          <button id="save-result" class="secondary" type="button">Guardar resultado</button>
+        </div>
+        <div id="result-summary" class="hidden">
+          <!-- Resumen del resultado y ganadores -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Proyecto de quiniela amistosa del Mundial 2026. Los datos se guardan en Cloudflare Worker; el navegador solo conserva una copia local de respaldo. Sistema de puntos virtuales, no dinero real.</p>
+  </footer>
+
+  <!-- Cargamos los datos de los partidos de forma estática. Este script define la
+       variable global MATCHES_DATA, usada como respaldo si la carga de matches.json falla. -->
+  <script src="matches_data.js"></script>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
