@@ -1,25 +1,20 @@
 /*
- * Página pública de resultados de la quiniela.
- * Lee principalmente desde Cloudflare Worker. bet_data.json queda como respaldo.
+ * Página pública de resultados.
+ * Solo lectura: no usa POST, no guarda en localStorage y no modifica Cloudflare.
+ * Consulta datos con GET desde Cloudflare Worker y archivos estáticos de partidos.
  */
 
 const RESULTS_CONFIG = window.APP_CONFIG || {};
 const API_ENDPOINT_RESULTS = RESULTS_CONFIG.API_ENDPOINT || '';
 const POINTS_PER_PARTICIPANT_RESULTS = 100;
 
-window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const [betData, matchesData] = await Promise.all([loadBetData(), loadMatchesData()]);
-    const normalized = normalizeBetDataResults(betData);
-    const matches = Array.isArray(matchesData.matches) ? matchesData.matches : matchesData;
-
-    recalculateStandingsResults(normalized);
-    renderParticipantsSummary(normalized.participants || [], normalized);
-    renderMatchesSummary(normalized.results || {}, matches || []);
-  } catch (error) {
-    console.error('Error al cargar datos:', error);
-    document.getElementById('participants-summary').textContent = 'No se pudieron cargar los datos.';
+window.addEventListener('DOMContentLoaded', () => {
+  const refreshButton = document.getElementById('refresh-results');
+  if (refreshButton) {
+    refreshButton.addEventListener('click', renderPublicResults);
   }
+
+  renderPublicResults();
 });
 
 function toNumberResults(value, fallback = 0) {
@@ -33,37 +28,42 @@ function formatPointsResults(value) {
   return number.toFixed(2).replace(/\.00$/, '').replace(/0$/, '');
 }
 
-async function loadBetData() {
-  if (API_ENDPOINT_RESULTS) {
-    try {
-      const response = await fetch(`${API_ENDPOINT_RESULTS}?_=${Date.now()}`, {
-        method: 'GET',
-        cache: 'no-store'
-      });
-
-      if (!response.ok) {
-        throw new Error(`La API respondió ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.warn('No se pudo obtener betData desde Cloudflare:', error);
-    }
-  }
-
-  try {
-    const response = await fetch('bet_data.json', { cache: 'no-store' });
-    return await response.json();
-  } catch (error) {
-    console.warn('No se pudo cargar bet_data.json:', error);
-    return {};
-  }
+function setResultsStatus(message, type = 'info') {
+  const status = document.getElementById('results-status');
+  if (!status) return;
+  status.className = `sync-status ${type}`;
+  status.textContent = message;
 }
 
-async function loadMatchesData() {
+async function loadBetDataReadOnly() {
+  if (!API_ENDPOINT_RESULTS) {
+    throw new Error('Falta configurar API_ENDPOINT en config.js.');
+  }
+
+  const response = await fetch(`${API_ENDPOINT_RESULTS}?_=${Date.now()}`, {
+    method: 'GET',
+    cache: 'no-store'
+  });
+
+  if (!response.ok) {
+    throw new Error(`Cloudflare respondió con estado ${response.status}.`);
+  }
+
+  return response.json();
+}
+
+async function loadMatchesDataReadOnly() {
   try {
-    const response = await fetch('matches.json', { cache: 'no-store' });
-    return await response.json();
+    const response = await fetch('matches.json', {
+      method: 'GET',
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error(`matches.json respondió ${response.status}`);
+    }
+
+    return response.json();
   } catch (error) {
     console.warn('No se pudo cargar matches.json. Se usará MATCHES_DATA:', error);
     return { matches: Array.isArray(window.MATCHES_DATA) ? window.MATCHES_DATA : [] };
@@ -72,6 +72,7 @@ async function loadMatchesData() {
 
 function normalizeBetDataResults(data) {
   const source = data && typeof data === 'object' ? data : {};
+
   return {
     participants: Array.isArray(source.participants)
       ? source.participants
@@ -107,14 +108,21 @@ function recalculateStandingsResults(data) {
     const result = data.results[idx];
     if (!result) return;
 
-    const basePool = toNumberResults(result.basePool, data.participants.length * POINTS_PER_PARTICIPANT_RESULTS);
+    const basePool = toNumberResults(
+      result.basePool,
+      data.participants.length * POINTS_PER_PARTICIPANT_RESULTS
+    );
     const previousAccumulated = runningAccumulated;
     const totalPool = previousAccumulated + basePool;
     const winners = [];
 
     data.participants.forEach((participant) => {
       const prediction = data.predictions[idx] ? data.predictions[idx][participant.name] : null;
-      if (prediction && prediction.score1 === result.score1 && prediction.score2 === result.score2) {
+      if (
+        prediction &&
+        Number(prediction.score1) === Number(result.score1) &&
+        Number(prediction.score2) === Number(result.score2)
+      ) {
         participant.correct += 1;
         winners.push(participant.name);
       }
@@ -145,10 +153,30 @@ function recalculateStandingsResults(data) {
 
   data.accumulatedPool = runningAccumulated;
   data.accumulatedPot = runningAccumulated;
+
+  return data;
+}
+
+function updateResultsCards(data) {
+  const totalParticipants = document.getElementById('results-total-participants');
+  const currentPool = document.getElementById('results-current-pool');
+  const finishedMatches = document.getElementById('results-finished-matches');
+  const lastUpdate = document.getElementById('results-last-update');
+
+  if (totalParticipants) totalParticipants.textContent = data.participants.length;
+  if (currentPool) currentPool.textContent = formatPointsResults(data.accumulatedPool || 0);
+  if (finishedMatches) finishedMatches.textContent = Object.keys(data.results || {}).length;
+  if (lastUpdate) {
+    lastUpdate.textContent = new Date().toLocaleTimeString('es-CR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
 }
 
 function renderParticipantsSummary(participants, data) {
   const container = document.getElementById('participants-summary');
+  if (!container) return;
   container.innerHTML = '';
 
   const summary = document.createElement('div');
@@ -167,10 +195,11 @@ function renderParticipantsSummary(participants, data) {
   }
 
   const table = document.createElement('table');
+  table.className = 'scoreboard-table';
   const thead = document.createElement('thead');
   const hdrRow = document.createElement('tr');
 
-  ['Participante', 'Aciertos', 'Puntos ganados'].forEach((h) => {
+  ['Posición', 'Participante', 'Aciertos', 'Puntos ganados'].forEach((h) => {
     const th = document.createElement('th');
     th.textContent = h;
     hdrRow.appendChild(th);
@@ -184,16 +213,28 @@ function renderParticipantsSummary(participants, data) {
     .slice()
     .sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
-      return b.correct - a.correct;
+      if (b.correct !== a.correct) return b.correct - a.correct;
+      return a.name.localeCompare(b.name, 'es');
     })
-    .forEach((p) => {
+    .forEach((p, index) => {
       const tr = document.createElement('tr');
+
+      const tdPosition = document.createElement('td');
+      tdPosition.className = 'position-cell';
+      tdPosition.textContent = String(index + 1);
+
       const tdName = document.createElement('td');
+      tdName.className = 'participant-name-cell';
       tdName.textContent = p.name;
+
       const tdCorrect = document.createElement('td');
-      tdCorrect.textContent = p.correct;
+      tdCorrect.textContent = formatPointsResults(p.correct);
+
       const tdPoints = document.createElement('td');
+      tdPoints.className = 'points-cell';
       tdPoints.textContent = formatPointsResults(p.points);
+
+      tr.appendChild(tdPosition);
       tr.appendChild(tdName);
       tr.appendChild(tdCorrect);
       tr.appendChild(tdPoints);
@@ -206,9 +247,10 @@ function renderParticipantsSummary(participants, data) {
 
 function renderMatchesSummary(results, matches) {
   const container = document.getElementById('matches-summary');
+  if (!container) return;
   container.innerHTML = '';
 
-  const resArray = Object.keys(results).map((idx) => ({
+  const resArray = Object.keys(results || {}).map((idx) => ({
     idx: parseInt(idx, 10),
     result: results[idx]
   }));
@@ -226,7 +268,7 @@ function renderMatchesSummary(results, matches) {
     card.className = 'match-result-card';
 
     const title = document.createElement('h3');
-    title.textContent = match ? `${match.team1} vs. ${match.team2}` : `Partido ${idx}`;
+    title.textContent = match ? `${match.team1} vs. ${match.team2}` : `Partido ${idx + 1}`;
 
     const info = document.createElement('p');
     if (match) info.textContent = `${match.date}${match.time ? ' ' + match.time : ''}`;
@@ -259,4 +301,35 @@ function renderMatchesSummary(results, matches) {
     card.appendChild(winnersInfo);
     container.appendChild(card);
   });
+}
+
+async function renderPublicResults() {
+  const refreshButton = document.getElementById('refresh-results');
+
+  try {
+    if (refreshButton) refreshButton.disabled = true;
+    setResultsStatus('Cargando datos desde Cloudflare...', 'info');
+
+    const [rawData, matchesData] = await Promise.all([
+      loadBetDataReadOnly(),
+      loadMatchesDataReadOnly()
+    ]);
+
+    const normalized = recalculateStandingsResults(normalizeBetDataResults(rawData));
+    const matches = Array.isArray(matchesData.matches) ? matchesData.matches : matchesData;
+
+    updateResultsCards(normalized);
+    renderParticipantsSummary(normalized.participants || [], normalized);
+    renderMatchesSummary(normalized.results || {}, matches || []);
+    setResultsStatus('Datos cargados correctamente desde Cloudflare. Modo solo consulta.', 'success');
+  } catch (error) {
+    console.error('Error al cargar datos:', error);
+    updateResultsCards({ participants: [], results: {}, accumulatedPool: 0 });
+    renderParticipantsSummary([], { accumulatedPool: 0 });
+    const matchesContainer = document.getElementById('matches-summary');
+    if (matchesContainer) matchesContainer.textContent = 'No se pudieron cargar los resultados.';
+    setResultsStatus(`No se pudieron cargar los datos. ${error.message}`, 'error');
+  } finally {
+    if (refreshButton) refreshButton.disabled = false;
+  }
 }

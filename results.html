@@ -3,47 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Resultados de Quiniela – Mundial 2026</title>
+  <title>Consulta de Resultados – Mundial 2026</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="public-results-page">
   <header>
-    <h1>Resultados de Quiniela – Mundial 2026</h1>
+    <h1>Consulta de Resultados – Mundial 2026</h1>
     <p>
-      Resumen de pronósticos, ganadores y bolsa acumulada de puntos virtuales para el Mundial 2026.
-      Los datos se leen principalmente desde Cloudflare Worker.
+      Página pública solo de consulta. Lee los datos desde Cloudflare Worker usando GET.
+      No permite agregar participantes, editar resultados ni modificar puntajes.
     </p>
-  
-    <nav class="page-nav" aria-label="Navegación principal">
-      <a href="index.html">Administrar</a>
+
+    <nav class="page-nav" aria-label="Navegación pública">
       <a href="results.html" aria-current="page">Resultados</a>
       <a href="puntajes.html">Puntajes</a>
     </nav>
   </header>
-  <main>
-    <section id="participants-section">
-      <h2>Tabla de Participantes</h2>
+
+  <main class="scoreboard-main public-results-main">
+    <section class="scoreboard-hero" aria-labelledby="public-results-title">
+      <div>
+        <h2 id="public-results-title">Resumen de la quiniela</h2>
+        <p>
+          La información se actualiza consultando Cloudflare. Esta página no contiene formularios
+          ni funciones de guardado.
+        </p>
+      </div>
+      <button id="refresh-results" class="primary" type="button">Actualizar datos</button>
+    </section>
+
+    <section id="results-status" class="sync-status info" aria-live="polite">
+      Cargando datos desde Cloudflare...
+    </section>
+
+    <section class="scoreboard-cards" aria-label="Resumen general">
+      <article class="score-card">
+        <span class="score-card-label">Participantes</span>
+        <strong id="results-total-participants">0</strong>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Acumulado actual</span>
+        <strong id="results-current-pool">0</strong>
+        <span class="score-card-note">puntos virtuales</span>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Partidos con resultado</span>
+        <strong id="results-finished-matches">0</strong>
+      </article>
+      <article class="score-card">
+        <span class="score-card-label">Última actualización</span>
+        <strong id="results-last-update">--</strong>
+      </article>
+    </section>
+
+    <section id="participants-section" class="public-section">
+      <h2>Tabla de participantes</h2>
       <div id="participants-summary">
         <!-- Se completa dinámicamente -->
       </div>
     </section>
-    <section id="matches-section">
-      <h2>Resultados de Partidos</h2>
+
+    <section id="matches-section" class="public-section">
+      <h2>Resultados de partidos</h2>
       <div id="matches-summary">
         <!-- Se completa dinámicamente -->
       </div>
     </section>
   </main>
+
   <footer>
     <p>
-      Esta página solo muestra información publicada y no permite registrar nuevos
-      pronósticos. Para administrar la quiniela, utiliza la página principal.
+      Solo lectura: esta página únicamente realiza consultas GET al Worker y no modifica datos.
     </p>
   </footer>
-  <!-- Script de respaldo para partidos (MATCHES_DATA) en caso de fallo al cargar matches.json -->
+
   <script src="matches_data.js"></script>
   <script src="config.js"></script>
-  <!-- Script para renderizar los resultados -->
   <script src="results.js"></script>
 </body>
 </html>

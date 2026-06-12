@@ -523,3 +523,32 @@ footer {
     text-align: center;
   }
 }
+
+/* ------ Páginas públicas solo consulta ------ */
+.public-results-page main.public-results-main,
+.scoreboard-page main.scoreboard-main {
+  display: block;
+}
+
+.public-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.public-section #participants-summary,
+.public-section #matches-summary {
+  overflow-x: auto;
+}
+
+.public-results-page .match-result-card {
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.public-results-page .match-result-card h3 {
+  margin-top: 0;
+  color: #004080;
+}
