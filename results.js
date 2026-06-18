@@ -97,17 +97,87 @@ function normalizeBetDataResults(data) {
     results: source.results && typeof source.results === 'object' ? source.results : {},
     accumulatedPool: toNumberResults(source.accumulatedPool ?? source.accumulatedPot, 0),
     accumulatedPot: toNumberResults(source.accumulatedPot ?? source.accumulatedPool, 0),
-    settings: source.settings && typeof source.settings === 'object' ? source.settings : {}
+    settings: {
+      pointsResetAfterResultIndex: null,
+      pointsResetAt: null,
+      ...(source.settings && typeof source.settings === 'object' ? source.settings : {})
+    }
   };
 }
 
+function getPointsResetAfterResultIndexResults(data) {
+  const value = data && data.settings ? data.settings.pointsResetAfterResultIndex : null;
+  if (value !== null && value !== undefined && value !== '') {
+    const number = Number(value);
+    if (Number.isInteger(number)) return number;
+  }
+
+  const resetKeys = Object.keys((data && data.results) || {})
+    .map((key) => Number(key))
+    .filter((key) => Number.isInteger(key) && data.results[key] && data.results[key].pointsResetBoundary);
+
+  return resetKeys.length ? Math.max(...resetKeys) : -1;
+}
+
+function getLastClosedMatchIndexResults(data) {
+  const keys = Object.keys((data && data.results) || {})
+    .map((key) => Number(key))
+    .filter((key) => Number.isInteger(key));
+
+  return keys.length ? Math.max(...keys) : -1;
+}
+
+function hasAwardedResultResults(data) {
+  return Object.values((data && data.results) || {}).some((result) => (
+    result &&
+    Array.isArray(result.winners) &&
+    result.winners.length > 0
+  ));
+}
+
+function shouldInferPointsResetResults(data) {
+  const participants = Array.isArray(data && data.participants) ? data.participants : [];
+
+  return (
+    getPointsResetAfterResultIndexResults(data) < 0 &&
+    participants.length > 0 &&
+    participants.every((participant) => toNumberResults(participant.points, 0) === 0) &&
+    getLastClosedMatchIndexResults(data) >= 0 &&
+    hasAwardedResultResults(data)
+  );
+}
+
+function inferMissingPointsResetSettingsResults(data) {
+  if (shouldInferPointsResetResults(data)) {
+    const resetIndex = getLastClosedMatchIndexResults(data);
+    const resetAt = data.settings.pointsResetAt || new Date().toISOString();
+
+    data.settings = {
+      ...(data.settings || {}),
+      pointsResetAfterResultIndex: resetIndex,
+      pointsResetAt: resetAt
+    };
+
+    data.results[resetIndex] = {
+      ...(data.results[resetIndex] || {}),
+      pointsResetBoundary: true,
+      pointsResetAt: resetAt
+    };
+  }
+
+  return data;
+}
+
 function recalculateStandingsResults(data) {
+  inferMissingPointsResetSettingsResults(data);
+
   data.participants.forEach((participant) => {
     participant.correct = 0;
     participant.points = 0;
   });
 
   let runningAccumulated = 0;
+  const pointsResetAfterResultIndex = getPointsResetAfterResultIndexResults(data);
 
   const resultKeys = Object.keys(data.results || {})
     .map((key) => Number(key))
@@ -142,7 +212,7 @@ function recalculateStandingsResults(data) {
     if (winners.length > 0) {
       pointsPerWinner = totalPool / winners.length;
       data.participants.forEach((participant) => {
-        if (winners.includes(participant.name)) {
+        if (idx > pointsResetAfterResultIndex && winners.includes(participant.name)) {
           participant.points += pointsPerWinner;
         }
       });
