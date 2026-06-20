@@ -71,6 +71,9 @@ function normalizeScoreboardData(data) {
     settings: {
       pointsResetAfterResultIndex: null,
       pointsResetAt: null,
+      manualPointsAfterResultIndex: null,
+      manualPointsAt: null,
+      manualPointsByParticipant: null,
       ...(source.settings && typeof source.settings === 'object' ? source.settings : {})
     }
   };
@@ -96,6 +99,57 @@ function getScoreboardLastClosedMatchIndex(data) {
     .filter((key) => Number.isInteger(key));
 
   return keys.length ? Math.max(...keys) : -1;
+}
+
+function getScoreboardManualPointsAfterResultIndex(data) {
+  const value = data && data.settings ? data.settings.manualPointsAfterResultIndex : null;
+  if (value !== null && value !== undefined && value !== '') {
+    const number = Number(value);
+    if (Number.isInteger(number)) return number;
+  }
+
+  const manualKeys = Object.keys((data && data.results) || {})
+    .map((key) => Number(key))
+    .filter((key) => Number.isInteger(key) && data.results[key] && data.results[key].manualPointsBoundary);
+
+  return manualKeys.length ? Math.max(...manualKeys) : -1;
+}
+
+function hasScoreboardManualPointsBaseline(data) {
+  return Boolean(
+    data &&
+    data.settings &&
+    data.settings.manualPointsAt
+  ) || Object.values((data && data.results) || {}).some((result) => result && result.manualPointsBoundary);
+}
+
+function getScoreboardManualPointsByParticipant(data) {
+  const source = data && data.settings ? data.settings.manualPointsByParticipant : null;
+
+  if (source && typeof source === 'object' && !Array.isArray(source)) {
+    return new Map(
+      Object.entries(source)
+        .map(([name, points]) => [name, toScoreNumber(points, 0)])
+    );
+  }
+
+  const manualIndex = getScoreboardManualPointsAfterResultIndex(data);
+  const boundaryPoints = data &&
+    data.results &&
+    data.results[manualIndex] &&
+    data.results[manualIndex].manualPointsByParticipant;
+
+  if (boundaryPoints && typeof boundaryPoints === 'object' && !Array.isArray(boundaryPoints)) {
+    return new Map(
+      Object.entries(boundaryPoints)
+        .map(([name, points]) => [name, toScoreNumber(points, 0)])
+    );
+  }
+
+  return new Map(
+    (Array.isArray(data && data.participants) ? data.participants : [])
+      .map((participant) => [participant.name, toScoreNumber(participant.points, 0)])
+  );
 }
 
 function hasScoreboardAwardedResult(data) {
@@ -142,13 +196,26 @@ function inferMissingScoreboardPointsReset(data) {
 function recalculateScoreboardStandings(data) {
   inferMissingScoreboardPointsReset(data);
 
+  const manualPointsByParticipant = getScoreboardManualPointsByParticipant(data);
+  const pointsResetAfterResultIndex = getScoreboardPointsResetAfterResultIndex(data);
+  const manualPointsAfterResultIndex = getScoreboardManualPointsAfterResultIndex(data);
+  const useManualPointsBaseline = (
+    hasScoreboardManualPointsBaseline(data) &&
+    manualPointsAfterResultIndex >= pointsResetAfterResultIndex
+  );
+  const shouldRecalculatePoints = pointsResetAfterResultIndex >= 0 || useManualPointsBaseline;
+  const pointsStartAfterResultIndex = useManualPointsBaseline
+    ? manualPointsAfterResultIndex
+    : pointsResetAfterResultIndex;
+
   data.participants.forEach((participant) => {
     participant.correct = 0;
-    participant.points = 0;
+    participant.points = (useManualPointsBaseline || !shouldRecalculatePoints)
+      ? (manualPointsByParticipant.get(participant.name) || 0)
+      : 0;
   });
 
   let runningAccumulated = 0;
-  const pointsResetAfterResultIndex = getScoreboardPointsResetAfterResultIndex(data);
 
   const resultKeys = Object.keys(data.results || {})
     .map((key) => Number(key))
@@ -178,7 +245,7 @@ function recalculateScoreboardStandings(data) {
     if (winners.length > 0) {
       const pointsPerWinner = totalPool / winners.length;
       data.participants.forEach((participant) => {
-        if (idx > pointsResetAfterResultIndex && winners.includes(participant.name)) {
+        if (shouldRecalculatePoints && idx > pointsStartAfterResultIndex && winners.includes(participant.name)) {
           participant.points += pointsPerWinner;
         }
       });
