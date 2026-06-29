@@ -69,6 +69,7 @@ function normalizeScoreboardData(data) {
     accumulatedPool: toScoreNumber(source.accumulatedPool ?? source.accumulatedPot, 0),
     accumulatedPot: toScoreNumber(source.accumulatedPot ?? source.accumulatedPool, 0),
     settings: {
+      pointsPerParticipant: SCOREBOARD_POINTS_PER_PARTICIPANT,
       pointsResetAfterResultIndex: null,
       pointsResetAt: null,
       manualPointsAfterResultIndex: null,
@@ -77,6 +78,12 @@ function normalizeScoreboardData(data) {
       ...(source.settings && typeof source.settings === 'object' ? source.settings : {})
     }
   };
+}
+
+function getScoreboardPointsPerParticipant(data) {
+  const value = data && data.settings ? data.settings.pointsPerParticipant : null;
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : SCOREBOARD_POINTS_PER_PARTICIPANT;
 }
 
 function getScoreboardPointsResetAfterResultIndex(data) {
@@ -197,6 +204,7 @@ function recalculateScoreboardStandings(data) {
   inferMissingScoreboardPointsReset(data);
 
   const manualPointsByParticipant = getScoreboardManualPointsByParticipant(data);
+  const currentPointsPerParticipant = getScoreboardPointsPerParticipant(data);
   const pointsResetAfterResultIndex = getScoreboardPointsResetAfterResultIndex(data);
   const manualPointsAfterResultIndex = getScoreboardManualPointsAfterResultIndex(data);
   const useManualPointsBaseline = (
@@ -226,7 +234,11 @@ function recalculateScoreboardStandings(data) {
     const result = data.results[idx];
     if (!result) return;
 
-    const basePool = toScoreNumber(result.basePool, data.participants.length * SCOREBOARD_POINTS_PER_PARTICIPANT);
+    const resultPointsPerParticipant = toScoreNumber(
+      result.pointsPerParticipant,
+      currentPointsPerParticipant
+    );
+    const basePool = toScoreNumber(result.basePool, data.participants.length * resultPointsPerParticipant);
     const totalPool = runningAccumulated + basePool;
     const winners = [];
 
